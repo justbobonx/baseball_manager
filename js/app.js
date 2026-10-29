@@ -4,6 +4,7 @@ import { dao, setPbUrl, getPbUrl } from './dao.js';
 import { generatePool } from './generator.js';
 import { ROLES, isRosterComplete } from './team.js';
 import { simulateGame } from './sim.js';
+import { startSeason, generateSchedule, simHalf, acceptTrade, claimFreeAgent } from './season.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -190,9 +191,140 @@ $('btn-sim').onclick = async () => {
   showResult(res, currentTeam.name, opp.name);
 };
 
+// --- season UI ---
+let currentSeason = null;
+
+async function loadSeasons() {
+  const list = await dao.seasons();
+  const sel = $('season-select');
+  sel.innerHTML = '<option value="">Select season…</option>';
+  for (const s of list) {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.name + ' (' + s.status + ')';
+    sel.appendChild(o);
+  }
+}
+
+async function renderSeason() {
+  if (!currentSeason) {
+    $('season-info').innerHTML = '';
+    $('season-actions').innerHTML = '';
+    $('standings').innerHTML = '';
+    $('offers').innerHTML = '';
+    return;
+  }
+  const s = currentSeason;
+  $('season-info').innerHTML = `<span class="phase-badge">${s.status}</span> Round ${s.current_round || 1}`;
+
+  const actions = $('season-actions');
+  actions.innerHTML = '';
+  if (s.status === 'preseason' || s.status === 'allstar') {
+    const btnClose = document.createElement('button');
+    btnClose.textContent = 'Close Window & Sim Half';
+    btnClose.className = 'primary';
+    btnClose.onclick = closeWindowAndSim;
+    actions.appendChild(btnClose);
+    const btnClaim = document.createElement('button');
+    btnClaim.textContent = 'Claim Free Agent';
+    btnClaim.onclick = openFaClaim;
+    actions.appendChild(btnClaim);
+  } else if (s.status === 'first_half' || s.status === 'second_half') {
+    const btnSim = document.createElement('button');
+    btnSim.textContent = 'Sim Remaining Games';
+    btnSim.className = 'primary';
+    btnSim.onclick = async () => {
+      const half = s.status === 'first_half' ? 1 : 2;
+      await simHalf(dao, s.id, half);
+      const next = half === 1 ? 'allstar' : 'complete';
+      await dao.updateSeason(s.id, { status: next, current_round: 1 });
+      currentSeason = { ...s, status: next };
+      await renderSeason();
+    };
+    actions.appendChild(btnSim);
+  }
+
+  const standings = await dao.seasonTeams(s.id);
+  let html = '<h3>Standings</h3>';
+  for (const st of standings) {
+    const name = st.expand?.team?.name || st.team;
+    html += `<div class="standings-row">${name}: ${st.wins || 0}-${st.losses || 0}</div>`;
+  }
+  $('standings').innerHTML = html;
+
+  const offers = await dao.tradeOffers(s.id);
+  let ohtml = '<h3>Trade Offers</h3>';
+  if (!offers.length) ohtml += '<div>None</div>';
+  for (const o of offers) {
+    const from = o.expand?.from_team?.name || o.from_team;
+    const to = o.expand?.to_team?.name || o.to_team;
+    const pout = o.expand?.player_out?.name || o.player_out;
+    const pin = o.expand?.player_in?.name || o.player_in;
+    ohtml += `<div class="offer-row">${from} offers ${pout} for ${pin} from ${to} — ${o.status}</div>`;
+  }
+  $('offers').innerHTML = ohtml;
+}
+
+async function closeWindowAndSim() {
+  if (!currentSeason) return;
+  const half = currentSeason.status === 'preseason' ? 1 : 2;
+  if (currentSeason.status === 'preseason') {
+    await generateSchedule(dao, currentSeason.id);
+  }
+  await simHalf(dao, currentSeason.id, half);
+  const next = half === 1 ? 'allstar' : 'complete';
+  await dao.updateSeason(currentSeason.id, { status: next, current_round: 1 });
+  currentSeason = { ...currentSeason, status: next };
+  await renderSeason();
+}
+
+async function openFaClaim() {
+  if (!currentTeam || !currentSeason) {
+    alert('Select a team first');
+    return;
+  }
+  const fa = await dao.freeAgents();
+  if (!fa.length) {
+    alert('No free agents');
+    return;
+  }
+  const pick = fa[0];
+  const ok = await claimFreeAgent(dao, currentSeason.id, currentTeam.id, pick.id);
+  alert(ok ? 'Claimed ' + pick.name : 'Failed');
+  await renderSeason();
+}
+
+$('btn-start-season').onclick = async () => {
+  const name = $('season-name').value.trim() || 'Season ' + new Date().getFullYear();
+  const teams = await dao.teams();
+  if (teams.length < 2) {
+    alert('Need at least 2 teams');
+    return;
+  }
+  const season = await startSeason(dao, name, teams.map(t => t.id));
+  $('season-name').value = '';
+  await loadSeasons();
+  currentSeason = season;
+  $('season-select').value = season.id;
+  await renderSeason();
+};
+
+$('season-select').onchange = async () => {
+  const id = $('season-select').value;
+  if (!id) {
+    currentSeason = null;
+    await renderSeason();
+    return;
+  }
+  const list = await dao.seasons();
+  currentSeason = list.find(s => s.id === id);
+  await renderSeason();
+};
+
 // boot
 if (getPbUrl()) {
   status('URL set — ready');
   refreshPoolCount();
   loadTeams();
+  loadSeasons();
 }
