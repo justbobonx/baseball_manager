@@ -78,3 +78,7 @@ button.primary:hover { filter: brightness(1.1); }
 .player-row button { padding: 4px 10px; }
 
 #result { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 0.9rem; }
+
+#standings, #offers, #season-info { margin-top: 12px; font-size: 0.9rem; }
+.standings-row, .offer-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.phase-badge { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
