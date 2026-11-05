@@ -1,18 +1,17 @@
 # Season_teams collection
 
-Records for each team in a season.
+Teams enrolled in a season and their record.
 
 ## Fields
 
-| Field   | Type     | Notes                  |
-|---------|----------|------------------------|
-| season  | relation | → seasons              |
-| team    | relation | → teams                |
-| wins    | number   | default 0              |
-| losses  | number   | default 0              |
+| Field  | Type     | Notes      |
+|--------|----------|------------|
+| season | relation | → seasons  |
+| team   | relation | → teams    |
+| wins   | number   | default 0  |
+| losses | number   | default 0  |
 
 ## Notes
 
-- Created when a season starts and teams are enrolled.
-- Updated after each half is simmed.
-- Standings are sorted by wins.
+- Created when a season starts, for every team whose roster is complete.
+- Updated after each simmed game. Standings sort by wins minus losses.

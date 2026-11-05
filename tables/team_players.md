@@ -1,36 +1,30 @@
 # Team_players collection
 
-Junction table linking teams to players with a role.
+One row per rostered player: which team, which hard slot, and where he bats.
 
 ## Fields
 
-| Field    | Type     | Notes                                      |
-|----------|----------|--------------------------------------------|
-| team     | relation | → teams                                    |
-| player   | relation | → players                                  |
-| role     | text     | See roles below                            |
+| Field         | Type     | Notes                                              |
+|---------------|----------|----------------------------------------------------|
+| team          | relation | → teams, single, required                          |
+| player        | relation | → players, single, required                        |
+| position      | select   | One slot value, see below. Required                |
+| batting_order | number   | 1–9 for field starters, 0 (or empty) for everyone else |
 
-## Roles
+## Position values
 
-Starters (position players):
-- starter_1B, starter_2B, starter_3B, starter_SS
-- starter_OF1, starter_OF2, starter_OF3
-- starter_C
+- Field starters: `C`, `1B`, `2B`, `3B`, `SS`, `LF`, `CF`, `RF`
+- Rotation: `SP1`, `SP2`, `SP3`, `SP4`, `SP5`
+- Bullpen: `RP1`, `RP2`, `RP3`, `RP4`, `CL` (closer)
+- Bench (optional): `BN1`, `BN2`, `BN3`, `BN4`
 
-Rotation:
-- rotation_1, rotation_2, rotation_3, rotation_4, rotation_5
+## Batting order
 
-Bench:
-- bench_if (utility infielder)
-- bench_of (utility outfielder)
-- bench_c (extra catcher)
-
-Bullpen:
-- reliever_1, reliever_2, reliever_3
-- closer
+- Field starters take spots 1–9; the one spot nobody claims is the pitcher's (9th by default).
+- No DH: the day's starter bats in the pitcher's spot, and relievers inherit it.
+- Missing or duplicate spots are filled in slot order by the game code.
 
 ## Notes
 
-- One player can appear on only one team (enforce in app logic).
-- Query by team id to load a full roster.
-- API rules: allow public create/update/delete/list for the game.
+- A player is on at most one team; a slot holds at most one player (unique indexes on `player` and on `team, position`).
+- Roster changes are locked for enrolled teams during first_half / second_half.

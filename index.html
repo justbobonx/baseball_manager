@@ -15,7 +15,7 @@
 
   <main>
     <section class="panel" id="setup-panel">
-      <h2>Setup</h2>
+      <h2>League</h2>
       <div class="row">
         <button id="btn-generate" type="button" class="primary">Generate Player Pool</button>
         <span id="pool-count">—</span>
@@ -28,17 +28,21 @@
     </section>
 
     <section class="panel" id="roster-panel" hidden>
-      <h2>Roster — <span id="roster-team-name"></span></h2>
-      <div id="slots" class="slots"></div>
-      <div class="row" style="margin-top:12px">
-        <button id="btn-sim" type="button" class="primary" disabled>Sim vs Opponent</button>
-        <select id="opp-select"></select>
+      <h2>Roster — <span id="roster-team-name"></span> <span id="roster-lock"></span></h2>
+      <div class="row">
+        <button id="btn-auto-draft" type="button">Auto-Draft Empty Slots</button>
+        <button id="btn-auto-order" type="button">Auto Batting Order</button>
       </div>
+      <div id="slots" class="slots"></div>
     </section>
 
-    <section class="panel" id="result-panel" hidden>
-      <h2>Game Result</h2>
-      <div id="result"></div>
+    <section class="panel" id="exhibition-panel">
+      <h2>Exhibition</h2>
+      <div class="row">
+        <select id="exh-away"></select> at <select id="exh-home"></select>
+        <button id="btn-exhibition" type="button" class="primary">Play Exhibition</button>
+      </div>
+      <div id="exhibition-result"></div>
     </section>
 
     <section class="panel" id="season-panel">
@@ -51,16 +55,16 @@
       <div id="season-info"></div>
       <div class="row" id="season-actions"></div>
       <div id="standings"></div>
-      <div id="offers"></div>
+      <div id="schedule"></div>
+      <div id="season-box"></div>
     </section>
   </main>
 
-  <!-- settings modal -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-box">
       <h3>PocketBase URL</h3>
       <p>Paste your PocketBase Cloud instance URL (e.g. https://xxx.pocketbasecloud.com)</p>
-      <input id="pb-url" style="width:100%; margin-bottom:12px" placeholder="https://..." />
+      <input id="pb-url" class="wide" placeholder="https://..." />
       <div class="row">
         <button id="btn-save-url" type="button" class="primary">Save</button>
         <button id="btn-close-settings" type="button">Close</button>
@@ -68,15 +72,23 @@
     </div>
   </div>
 
-  <!-- player picker modal -->
   <div id="picker-modal" class="modal hidden">
     <div class="modal-box">
       <h3 id="picker-title">Pick Player</h3>
+      <div class="row">
+        <button id="btn-release" type="button">Release Current Player</button>
+        <button id="btn-close-picker" type="button">Cancel</button>
+      </div>
       <div id="picker-list"></div>
-      <button id="btn-close-picker" type="button" style="margin-top:12px">Cancel</button>
     </div>
   </div>
 
-  <script type="module" src="js/app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+  <script src="js/dao.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/team.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/season.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,70 +1,65 @@
 # Baseball Manager — Play Resolution Algorithm
 
-Abilities used on every plate appearance: Eye, Power, Arm, Glove, Accuracy.  
-Positions and lineup are already assigned by the team, so the correct fielder grades are known.
+Every plate appearance is a chain of five rolls. Each roll starts from major-league base rates
+and is moved by how far the players involved sit above or below **nominal** skill.
+All numbers below are named, tweakable constants at the top of `js/sim.js`.
 
-## Inputs per plate appearance
-- Batter: Eye, Power
-- Pitcher: Arm, Accuracy
-- Assigned fielders: their relevant grades (Infield = Glove + Accuracy, Outfield = Power + Arm, Catcher = Eye + Glove)
-- Optional later: handedness matchup modifier
+## League baseline (approx. 2024, per plate appearance)
+
+| K | BB | HBP | 1B | 2B | 3B | HR | Ball-in-play outs | Errors |
+|---|----|-----|----|----|----|----|-------------------|--------|
+| .226 | .082 | .011 | .140 | .043 | .004 | .029 | .455 | .010 |
+
+Errors are carved out of what would otherwise be ball-in-play outs (together they make ~.465).
+Each step's base rates are calibrated so that a nominal batter, pitcher and fielders reproduce this line on average.
+
+## Nominal skill and edges
+
+- Nominal is fixed by the generator definition, never measured from the current pool:
+  nominal ability 70, ability spread 23; nominal two-ability grade 70, grade spread 15.
+- A player's **edge** for a skill is how many spreads he sits above nominal (negative when below).
+- Batter and pitcher edges are applied separately; a batter rating is never subtracted from a pitcher rating.
+
+## Combining: odds space
+
+For each outcome, take its league odds against the reference outcome of that step and multiply by
+an exponential of the weighted edges: the batter's edge pushes batter-friendly outcomes up, the pitcher's
+edge pushes them down, and the signs flip for pitcher-friendly outcomes. The weights of all outcomes in a
+step are then renormalized and rolled once. Probabilities stay between 0 and 1 by construction, so no clamps.
 
 ## Steps
 
-1. **Discipline check** (Eye vs Accuracy)  
-   Diff = batter.Eye − pitcher.Accuracy  
-   Base probabilities (tunable):  
-   - K chance = 0.18 − Diff * 0.0015 (clamped 0.08–0.35)  
-   - BB chance = 0.08 + Diff * 0.0012 (clamped 0.03–0.16)  
-   - Else → Ball in play  
+1. **Discipline** — batter Eye vs pitcher Accuracy. Strikeout, walk and hit batter, each against a ball in play.
+   A good eye raises walks and lowers strikeouts; a good pitcher does the reverse. Hit batters follow pitcher command only.
+2. **Contact quality** — batter Power vs pitcher Arm. League mix soft 25% / medium 45% / hard 30%;
+   power raises hard and lowers soft contact, arm does the reverse. No fixed cutoffs.
+3. **Location** — infield share depends on quality (soft 75%, medium 55%, hard 30%), so hard contact leans outfield.
+   A small share of infield balls goes to the catcher; the rest split among 1B / 2B / 3B / SS, outfield among LF / CF / RF.
+   The assigned fielder's grade is used: Infield (Glove + Accuracy), Outfield (Power + Arm), Catcher (Eye + Glove).
+4. **Fielding** — league hit and error rates per location and per contact quality; everything else is an out
+   (grounders, pop-ups and fly outs). The fielder's grade edge raises out odds and lowers error odds; the pitcher's
+   Pitching grade edge also raises out odds slightly.
+5. **Hit type** — infield hits are singles. Outfield hits use the league single / double / triple / homer mix,
+   with extra-base odds raised by the batter's Power edge and lowered by the pitcher's Arm edge. The outfielder's edge
+   turns doubles and triples back into singles (it cannot stop a home run).
 
-   Roll once. If K or BB, record the outcome and end the PA.  
-   (HBP can be a small fixed slice of the remaining probability if desired.)
+## Runner advancement and scoring
 
-2. **Contact quality** (only if ball in play)  
-   Diff = batter.Power − pitcher.Arm  
-   Quality:  
-   - Hard if Diff > +12  
-   - Medium if Diff between −12 and +12  
-   - Soft if Diff < −12  
+- Standard advancement: a single moves every runner one base, a double two, a triple clears the bases, a homer scores everyone.
+  Walks and hit batters move forced runners only.
+- Optional extra bases (scoring from second on a single, first to third on a single, scoring from first on a double,
+  tagging from third on a fly out) start from league rates and are held down by the outfielder's edge.
+- Ground-ball double plays and runners moving up on groundouts use fixed chances. An error moves every runner two bases;
+  runs scoring on an error are unearned. No speed ability, so no steals.
+- Walk-off: the game ends as soon as the home side leads in the bottom of the ninth or later (a walk-off homer counts in full).
 
-   Raw extra-base bias = Diff * 0.01 (added later to hit type).
+## Stats
 
-3. **Location and fielder**  
-   Roll location (roughly 55% infield, 45% outfield; can bias slightly by quality).  
-   Select the assigned fielder for that location.  
-   Fielder grade:  
-   - Infield: (Glove + Accuracy) / 2  
-   - Outfield: (Power + Arm) / 2  
-   - Catcher involvement (when relevant): (Eye + Glove) / 2  
+Each play credits the batter (PA, AB, H, 2B, 3B, HR, R, RBI, BB, K, HBP, SF, reached on error), the pitcher who let each
+runner on (outs, H, R, ER, BB, K, HR, HBP, batters faced, pitches) and team errors. The game's box score is stored on the game record.
 
-4. **Fielder resolution**  
-   Diff = fielder.grade − 60  (or vs a fixed baseline)  
-   Out chance = 0.65 + Diff * 0.008 + quality modifier  
-   - Soft contact: +0.10 out  
-   - Hard contact: −0.12 out  
-   Clamp out chance 0.40–0.85.  
+## Pitcher usage (outside the plate-appearance loop)
 
-   Roll:  
-   - Out → record out (groundout, flyout, etc. by location).  
-   - Else → hit.  
-     Hit type:  
-     - Base single rate high.  
-     - Extra-base chance increased by the raw bias from step 2 and reduced by outfield grade.  
-     - Error chance (small, 0.02–0.08) inverse to fielder grade; on error the batter reaches and runners may advance extra.
-
-5. **Runner advancement and scoring**  
-   Apply standard baseball rules for the result (single advances all one base, double two, etc.).  
-   Optional: small chance of extra base on hard contact or outfield arm grade, or catcher throw on close plays.  
-   Count outs, score runs that cross home.
-
-6. **Record stats**  
-   Credit the specific batter, pitcher, and fielder(s) with AB, H, HR, BB, K, IP, ER, errors, etc. as the play resolves.
-
-## Notes
-- Every ability is consulted on a typical PA: Eye/Accuracy on the first roll, Power/Arm on quality, and the positional pair on the fielding roll.  
-- Numbers above are starting points; they can be tuned so league averages land near real baseball rates.  
-- No speed ability, so baserunning stays average (no steals or aggressive extra bases beyond the basic advancement).  
-- Bullpen and starter usage stay outside this loop (simple innings or pitch-count threshold).
-
-This is the complete resolution path. It produces real per-play and per-game stats from the five abilities without additional fields.
+Pitch counts are rolled per plate appearance (strikeouts and walks run longer). The starter leaves once he passes a
+60–90 pitch budget that shrinks with runs and hits allowed; relievers follow in order with short budgets; the closer
+takes save spots from the ninth on.

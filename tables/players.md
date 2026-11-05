@@ -1,26 +1,22 @@
 # Players collection
 
-Pool of all generated players. One record per player.
+Shared pool of generated players. Seeded by the generator (see abilities-and-generator.md).
+No position lives on the player; teams assign positions in team_players.
 
 ## Fields
 
-| Field     | Type   | Notes                                      |
-|-----------|--------|--------------------------------------------|
-| name      | text   | Generated full name                        |
-| position  | text   | 1B, 2B, 3B, SS, OF, C, SP, RP, CL         |
-| contact   | number | 0-100 batting contact                      |
-| power     | number | 0-100 batting power                        |
-| speed     | number | 0-100 speed / baserunning                  |
-| fielding  | number | 0-100 fielding                             |
-| arm       | number | 0-100 throwing arm                         |
-| stuff     | number | 0-100 pitcher stuff (pitchers only)        |
-| control   | number | 0-100 pitcher control (pitchers only)      |
-| stamina   | number | 0-100 pitcher stamina (pitchers only)      |
-| age       | number | 20-40                                      |
+| Field      | Type   | Notes                                   |
+|------------|--------|-----------------------------------------|
+| name       | text   | Generated full name                     |
+| eye        | number | 0–100, integer. Hitting + Catching      |
+| power      | number | 0–100, integer. Hitting + Outfield      |
+| arm        | number | 0–100, integer. Outfield + Pitching     |
+| glove      | number | 0–100, integer. Infield + Catching      |
+| accuracy   | number | 0–100, integer. Pitching + Infield      |
+| handedness | select | R / L (70 / 30)                         |
 
 ## Notes
 
-- All players live in this single pool.
-- Teams reference them via team_players.
-- Generate hundreds; filter by position in the UI.
-- API rules: allow public list/create for the game (or lock down later).
+- Grades (hitting, infield, outfield, catching, pitching) are computed in the client, never stored.
+- Free agent = player with no team_players row.
+- Per-player season stats will move to their own table later; for now they live in games.box_score.

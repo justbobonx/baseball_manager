@@ -9,76 +9,53 @@
   --accent: #3d8bfd;
   --good: #3dd68c;
   --warn: #f5a524;
+  --control: #243044;
+  --control-hover: #2c3c56;
+  --overlay: #05080c;
+  --white: #ffffff;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
 body { min-height: 100vh; }
 
-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
+header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 header h1 { margin: 0; font-size: 1.25rem; }
 #pb-status { font-size: 0.85rem; color: var(--muted); }
 
 main { padding: 16px; max-width: 1200px; margin: 0 auto; }
 
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
 
-button, select, input {
-  background: #243044;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font: inherit;
-  cursor: pointer;
-}
-button:hover { background: #2c3c56; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button, select, input { background: var(--control); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font: inherit; cursor: pointer; }
+button:hover { background: var(--control-hover); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--white); }
 button.primary:hover { filter: brightness(1.1); }
+input.wide { width: 100%; margin-bottom: 12px; }
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
 
-.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-.slot {
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  padding: 8px;
-  min-height: 64px;
-  font-size: 0.85rem;
-}
+.slot-group { grid-column: 1 / -1; margin: 12px 0 4px; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.slot { border: 1px dashed var(--border); border-radius: 6px; padding: 8px; min-height: 72px; font-size: 0.85rem; cursor: pointer; }
 .slot strong { display: block; color: var(--muted); font-size: 0.75rem; }
+.slot small { color: var(--muted); }
 .slot.filled { border-style: solid; border-color: var(--accent); }
+.slot select { padding: 2px 4px; margin-top: 4px; }
+.locked { color: var(--warn); font-size: 0.8rem; }
 
-.modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,.6);
-  display: flex; align-items: center; justify-content: center; z-index: 10;
-}
+.modal { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .modal.hidden { display: none; }
-.modal-box {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
-  padding: 16px; width: min(480px, 92vw); max-height: 80vh; overflow: auto;
-}
-.player-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem;
-}
+.modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; width: min(560px, 92vw); max-height: 80vh; overflow: auto; }
+.player-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .player-row button { padding: 4px 10px; }
 
-#result { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 0.9rem; }
+.box { font-family: ui-monospace, monospace; font-size: 0.8rem; white-space: pre; overflow-x: auto; margin-top: 12px; }
+.log { font-family: ui-monospace, monospace; font-size: 0.8rem; white-space: pre-wrap; max-height: 320px; overflow: auto; color: var(--muted); }
 
-#standings, #offers, #season-info { margin-top: 12px; font-size: 0.9rem; }
-.standings-row, .offer-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
-.phase-badge { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+#standings, #schedule, #season-info { margin-top: 12px; font-size: 0.9rem; }
+.standings-row, .game-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.game-row { cursor: pointer; }
+.game-row.unplayed { color: var(--muted); cursor: default; }
+.phase-badge { background: var(--accent); color: var(--white); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }

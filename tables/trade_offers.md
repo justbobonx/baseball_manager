@@ -1,22 +1,15 @@
-# Trade_offers collection
+# Trade_offers collection — deferred
 
-1-for-1 trade proposals during preseason or All-Star windows.
+Trades are deferred. The app neither reads nor writes this collection.
+Keep the collection as is (or lock all its API rules) until trades are designed;
+it should then reference team_players positions instead of the old roles.
 
-## Fields
+## Fields (unchanged)
 
-| Field      | Type     | Notes                              |
-|------------|----------|------------------------------------|
-| season     | relation | → seasons                          |
-| from_team  | relation | → teams (proposing)                |
-| to_team    | relation | → teams (receiving the offer)      |
-| player_out | relation | → players (leaving from_team)      |
-| player_in  | relation | → players (coming from to_team)    |
-| status     | text     | pending / accepted / rejected      |
-| round      | number   | window round when proposed         |
-
-## Notes
-
-- Only valid while season status is preseason or allstar.
-- Accepting moves the two players between the teams (updates team_players).
-- Rejected or expired offers stay for history.
-- At window close, remaining pending offers are marked rejected.
+| Field             | Type     | Notes                      |
+|-------------------|----------|----------------------------|
+| from_team         | relation | → teams                    |
+| to_team           | relation | → teams                    |
+| offered_player    | relation | → players                  |
+| requested_player  | relation | → players                  |
+| status            | select   | pending / accepted / rejected |
