@@ -33,13 +33,14 @@ const GRADE_COLOR_STOPS = [
   [100, '#00cc00']
 ];
 
-// Short headers and ability labels for the six picker columns.
-const PICKER_COL_HITTING = { key: 'hitting', header: 'HIT', attrs: [['P', 'power'], ['E', 'eye']] };
-const PICKER_COL_INFIELD = { key: 'infield', header: 'IF', attrs: [['G', 'glove'], ['R', 'range']] };
-const PICKER_COL_OUTFIELD = { key: 'outfield', header: 'OF', attrs: [['R', 'range'], ['A', 'arm']] };
-const PICKER_COL_CATCHING = { key: 'catching', header: 'C', attrs: [['A', 'arm'], ['G', 'glove']] };
-const PICKER_COL_PITCHING = { key: 'pitching', header: 'P', attrs: [['C', 'command'], ['V', 'velocity']] };
-const PICKER_COL_SPEED = { key: 'speed', header: 'SP', attrs: [['S', 'speed']] };
+// Grade headers and ability labels for the six picker columns.
+const PICKER_COL_HITTING = { key: 'hitting', header: 'Hitting', attrs: [['P', 'power'], ['E', 'eye']] };
+const PICKER_COL_INFIELD = { key: 'infield', header: 'Infield', attrs: [['G', 'glove'], ['R', 'range']] };
+const PICKER_COL_OUTFIELD = { key: 'outfield', header: 'Outfield', attrs: [['R', 'range'], ['A', 'arm']] };
+const PICKER_COL_CATCHING = { key: 'catching', header: 'Catching', attrs: [['A', 'arm'], ['G', 'glove']] };
+const PICKER_COL_PITCHING = { key: 'pitching', header: 'Pitching', attrs: [['C', 'command'], ['V', 'velocity']] };
+const PICKER_COL_SPEED = { key: 'speed', header: 'Speed', attrs: [['S', 'speed']] };
+const PICKER_COLUMNS = [PICKER_COL_HITTING, PICKER_COL_INFIELD, PICKER_COL_OUTFIELD, PICKER_COL_CATCHING, PICKER_COL_PITCHING, PICKER_COL_SPEED];
 
 const $ = (id) => document.getElementById(id);
 
@@ -178,6 +179,8 @@ let currentRoster = {};
 let currentSeason = null;
 let rosterLocked = false;
 let pickerSlot = null;
+let pickerCandidates = [];
+let pickerSort = 'recommend';
 
 function setStatus(msg) {
   $('pb-status').textContent = msg;
@@ -319,28 +322,30 @@ async function loadRoster() {
   }
 }
 
-// Lists free agents and this team's own players from other slots, sorted by the
-// displayed grade columns for this pick (later columns only break ties).
-async function openPicker(slot) {
-  pickerSlot = slot;
-  $('picker-title').textContent = 'Pick ' + slot.label;
-  $('btn-release').disabled = !currentRoster[slot.id];
+// Draws the current picker candidates in the chosen sort, keeping the slot's
+// column layout. Recommend uses the same fitness score as auto-draft; a grade
+// option uses that grade first and the other columns only to break ties.
+function renderPickerList() {
   const list = $('picker-list');
-  list.innerHTML = 'Loading…';
-  $('picker-modal').classList.remove('hidden');
-  const columns = pickerColumnsForSlot(slot);
-  const own = Object.values(currentRoster).filter(row => row.position !== slot.id).map(row => ({ player: row.expand.player, from: row.position }));
-  const candidates = own.concat((await dao.freeAgents()).map(player => ({ player, from: '' })));
-  // Sort by the same column order the row displays, later columns only break ties.
-  candidates.sort((a, b) => {
+  const columns = pickerColumnsForSlot(pickerSlot);
+  const primary = PICKER_COLUMNS.find(column => column.key === pickerSort);
+  const ranked = pickerCandidates.slice().sort((a, b) => {
+    if (pickerSort === 'recommend') {
+      const recommended = slotDraftScore(pickerSlot, b.player) - slotDraftScore(pickerSlot, a.player);
+      if (recommended) return recommended;
+    } else if (primary) {
+      const byGrade = pickerColumnValue(b.player, primary) - pickerColumnValue(a.player, primary);
+      if (byGrade) return byGrade;
+    }
     for (const column of columns) {
+      if (column.key === pickerSort) continue;
       const diff = pickerColumnValue(b.player, column) - pickerColumnValue(a.player, column);
       if (diff) return diff;
     }
     return 0;
   });
   list.innerHTML = '';
-  for (const candidate of candidates.slice(0, APP_PICKER_LIMIT)) {
+  for (const candidate of ranked.slice(0, APP_PICKER_LIMIT)) {
     const p = candidate.player;
     const row = document.createElement('div');
     row.className = 'player-row';
@@ -353,14 +358,28 @@ async function openPicker(slot) {
     const button = document.createElement('button');
     button.textContent = 'Assign';
     button.onclick = () => guarded(async () => {
-      if (candidate.from) await dao.assignSlot(currentTeam.id, p.id, slot.id, slot.kind === 'field' ? currentRoster[candidate.from].batting_order || 0 : 0);
-      else await claimFreeAgent(dao, currentSeason, currentTeam.id, p.id, slot.id);
+      if (candidate.from) await dao.assignSlot(currentTeam.id, p.id, pickerSlot.id, pickerSlot.kind === 'field' ? currentRoster[candidate.from].batting_order || 0 : 0);
+      else await claimFreeAgent(dao, currentSeason, currentTeam.id, p.id, pickerSlot.id);
       $('picker-modal').classList.add('hidden');
       await loadRoster();
     });
     body.querySelector('.picker-name').appendChild(button);
     list.appendChild(row);
   }
+}
+
+// Lists free agents and this team's own players from other slots.
+async function openPicker(slot) {
+  pickerSlot = slot;
+  pickerSort = 'recommend';
+  $('picker-sort').value = 'recommend';
+  $('picker-title').textContent = 'Pick ' + slot.label;
+  $('btn-release').disabled = !currentRoster[slot.id];
+  $('picker-list').innerHTML = 'Loading…';
+  $('picker-modal').classList.remove('hidden');
+  const own = Object.values(currentRoster).filter(row => row.position !== slot.id).map(row => ({ player: row.expand.player, from: row.position }));
+  pickerCandidates = own.concat((await dao.freeAgents()).map(player => ({ player, from: '' })));
+  renderPickerList();
 }
 
 async function loadSeasons() {
@@ -461,6 +480,10 @@ $('btn-save-url').onclick = () => guarded(async () => {
   await boot();
 });
 $('btn-close-picker').onclick = () => $('picker-modal').classList.add('hidden');
+$('picker-sort').onchange = () => {
+  pickerSort = $('picker-sort').value;
+  if (pickerSlot) renderPickerList();
+};
 $('btn-release').onclick = () => guarded(async () => {
   await dao.releaseSlot(currentRoster[pickerSlot.id].id);
   $('picker-modal').classList.add('hidden');

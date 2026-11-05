@@ -74,10 +74,21 @@
 
   <div id="picker-modal" class="modal hidden">
     <div class="modal-box">
-      <h3 id="picker-title">Pick Player</h3>
-      <div class="row">
-        <button id="btn-release" type="button">Release Current Player</button>
-        <button id="btn-close-picker" type="button">Cancel</button>
+      <div class="picker-header">
+        <h3 id="picker-title">Pick Player</h3>
+        <div class="row">
+          <select id="picker-sort">
+            <option value="recommend">Recommend</option>
+            <option value="hitting">Hitting</option>
+            <option value="infield">Infield</option>
+            <option value="outfield">Outfield</option>
+            <option value="catching">Catching</option>
+            <option value="pitching">Pitching</option>
+            <option value="speed">Speed</option>
+          </select>
+          <button id="btn-release" type="button">Release Current Player</button>
+          <button id="btn-close-picker" type="button">Cancel</button>
+        </div>
       </div>
       <div id="picker-list"></div>
     </div>

@@ -64,7 +64,12 @@ input.wide { width: 100%; margin-bottom: 12px; }
 .modal { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .modal.hidden { display: none; }
 .modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; width: min(560px, 92vw); max-height: 80vh; overflow: auto; }
-#picker-modal .modal-box { width: min(980px, 96vw); }
+#picker-modal .modal-box { width: min(980px, 96vw); height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+.picker-header { flex-shrink: 0; }
+.picker-header h3 { margin: 0 0 8px; }
+.picker-header .row { margin-bottom: 8px; }
+#picker-sort { min-width: 11em; }
+#picker-list { overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; padding-right: 12px; scrollbar-gutter: stable; }
 .player-row { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
 .picker-body { min-width: 0; }
 .picker-name { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-weight: 600; margin-bottom: 6px; }
