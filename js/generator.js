@@ -1,16 +1,19 @@
 // Player abilities, grades and pool generation.
-// Follows the abilities and generator design doc: five abilities, grades computed on the fly,
+// Follows the abilities and generator design doc: eight abilities, grades computed on the fly,
 // floors first then skewed draws from the free pool in a random order.
 
-const GEN_TOTAL_MIN = 300;
-const GEN_TOTAL_MAX = 400;
-const GEN_TOTAL_MEAN = 350;
-const GEN_TOTAL_SPREAD = 22;
+const GEN_TOTAL_MIN = 450;
+const GEN_TOTAL_MAX = 600;
+const GEN_TOTAL_MEAN = 520;
+const GEN_TOTAL_SPREAD = 40;
 const GEN_FLOOR_MIN = 30;
 const GEN_FLOOR_MAX = 50;
 const GEN_ABILITY_MAX = 100;
-const GEN_SKEW_POWER = 3;
+const GEN_SKEW_POWER = 2;
 const GEN_LEFT_HANDED_CHANCE = 0.30;
+
+// Ability list order is only a default; generation shuffles before drawing.
+const GEN_ABILITIES = ['eye', 'power', 'speed', 'glove', 'range', 'arm', 'command', 'velocity'];
 
 // Pool coverage: keep generating until enough players clear each grade bar
 // to stock this many full rosters.
@@ -31,14 +34,15 @@ const POOL_MAX_ATTEMPTS = 20000;
 const GEN_FIRST_NAMES = ['Alex','Jordan','Casey','Riley','Morgan','Taylor','Quinn','Avery','Blake','Drew','Sam','Jamie','Chris','Pat','Lee','Max','Leo','Noah','Eli','Owen','Jack','Luke','Ben','Cole','Finn','Mateo','Hank','Gus','Ray','Wade','Omar','Tito','Kenji','Dario','Sully','Abe','Joe','Vic','Rafael','Hal'];
 const GEN_LAST_NAMES = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez','Gonzalez','Wilson','Anderson','Thomas','Taylor','Moore','Jackson','Martin','Lee','Perez','Thompson','White','Harris','Okafor','Nakamura','Kowalski','Castillo','Brennan','Duval','Ortega','Sato','Fischer','Molina','Reyes','Walsh','Petrov','Lindqvist','Abernathy'];
 
-// Grades are never stored; every caller derives them from the five abilities.
+// Grades are never stored; every caller derives them from the eight abilities.
+// Speed stands alone (baserunning only) and is not part of any position grade.
 function playerGrades(player) {
   return {
     hitting: (player.eye + player.power) / 2,
-    infield: (player.glove + player.accuracy) / 2,
-    outfield: (player.power + player.arm) / 2,
-    catching: (player.eye + player.glove) / 2,
-    pitching: (player.arm + player.accuracy) / 2
+    infield: (player.glove + player.range) / 2,
+    outfield: (player.range + player.arm) / 2,
+    catching: (player.arm + player.glove) / 2,
+    pitching: (player.command + player.velocity) / 2
   };
 }
 
@@ -52,14 +56,14 @@ function generatePlayer() {
   // Every ability starts at its own random floor; whatever is left is the free pool.
   const player = {};
   let free = total;
-  for (const ability of ['eye', 'power', 'arm', 'glove', 'accuracy']) {
+  for (const ability of GEN_ABILITIES) {
     player[ability] = GEN_FLOOR_MIN + Math.floor(Math.random() * (GEN_FLOOR_MAX - GEN_FLOOR_MIN + 1));
     free -= player[ability];
   }
 
   // Walk the abilities in shuffled order; early ones draw heavily toward their cap
   // and starve the later ones, which is what produces specialists.
-  const order = ['eye', 'power', 'arm', 'glove', 'accuracy'];
+  const order = GEN_ABILITIES.slice();
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [order[i], order[j]] = [order[j], order[i]];

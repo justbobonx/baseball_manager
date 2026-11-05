@@ -15,30 +15,30 @@ const SIM_LEAGUE_BIP_OUT = 0.455;
 const SIM_LEAGUE_ERROR = 0.010;
 
 // Nominal skill comes from the generator's definition, never from the current pool.
-// Edges are measured in spreads away from nominal.
+// Ability mean 70 (total mean 560 over eight abilities); measured ability spread ~24,
+// measured two-ability grade spread ~16. Edges are measured in spreads away from nominal.
 const SIM_NOMINAL_ABILITY = 70;
-const SIM_ABILITY_SPREAD = 23;
+const SIM_ABILITY_SPREAD = 24;
 const SIM_NOMINAL_GRADE = 70;
-const SIM_GRADE_SPREAD = 15;
+const SIM_GRADE_SPREAD = 16;
 
-// Step one, discipline: batter eye edge and pitcher accuracy edge move the odds of a
-// strikeout, walk or hit batter against a ball in play. A good eye trades strikeouts for
-// walks; a good pitcher does the reverse. Hit batters follow pitcher command only.
+// Step one, discipline: batter Eye vs pitcher Command. Strikeout, walk or hit batter
+// against a ball in play. Hit batters follow pitcher Command only.
 const SIM_K_EYE_WEIGHT = 0.35;
-const SIM_K_ACCURACY_WEIGHT = 0.35;
+const SIM_K_COMMAND_WEIGHT = 0.35;
 const SIM_BB_EYE_WEIGHT = 0.35;
-const SIM_BB_ACCURACY_WEIGHT = 0.35;
-const SIM_HBP_ACCURACY_WEIGHT = 0.30;
+const SIM_BB_COMMAND_WEIGHT = 0.35;
+const SIM_HBP_COMMAND_WEIGHT = 0.30;
 
 // Step two, contact quality: league mix of soft, medium and hard contact on balls in play,
-// moved by batter power edge against pitcher arm edge.
+// moved by batter Power edge against pitcher Velocity edge.
 const SIM_LEAGUE_SOFT_SHARE = 0.25;
 const SIM_LEAGUE_MEDIUM_SHARE = 0.45;
 const SIM_LEAGUE_HARD_SHARE = 0.30;
 const SIM_HARD_POWER_WEIGHT = 0.40;
-const SIM_HARD_ARM_WEIGHT = 0.40;
+const SIM_HARD_VELOCITY_WEIGHT = 0.40;
 const SIM_SOFT_POWER_WEIGHT = 0.30;
-const SIM_SOFT_ARM_WEIGHT = 0.30;
+const SIM_SOFT_VELOCITY_WEIGHT = 0.30;
 
 // Step three, location: the share of each contact quality that stays in the infield.
 // Of infield balls a small share goes to the catcher; the rest split by position weight.
@@ -53,43 +53,59 @@ const SIM_OUTFIELD_WEIGHT_LF = 0.33;
 const SIM_OUTFIELD_WEIGHT_CF = 0.34;
 
 // Step four, fielding: league hit and error rates for each location and contact quality;
-// everything else is an out. Together with the mixes above these reproduce the league line.
-const SIM_INFIELD_HIT_SOFT = 0.08;
-const SIM_INFIELD_HIT_MEDIUM = 0.09;
-const SIM_INFIELD_HIT_HARD = 0.17;
-const SIM_OUTFIELD_HIT_SOFT = 0.50;
-const SIM_OUTFIELD_HIT_MEDIUM = 0.53;
-const SIM_OUTFIELD_HIT_HARD = 0.75;
+// everything else is an out. Range raises out odds (gets to the ball); Glove lowers
+// error odds and also raises clean outs. Pitcher abilities are not reused here.
+const SIM_INFIELD_HIT_SOFT = 0.07;
+const SIM_INFIELD_HIT_MEDIUM = 0.08;
+const SIM_INFIELD_HIT_HARD = 0.15;
+const SIM_OUTFIELD_HIT_SOFT = 0.47;
+const SIM_OUTFIELD_HIT_MEDIUM = 0.50;
+const SIM_OUTFIELD_HIT_HARD = 0.71;
 const SIM_INFIELD_ERROR = 0.0224;
 const SIM_OUTFIELD_ERROR = 0.0062;
-// A better fielder raises the odds of an out and lowers the odds of an error;
-// a better pitcher (by pitching grade) nudges the odds of an out up as well.
-const SIM_OUT_FIELDER_WEIGHT = 0.25;
-const SIM_OUT_PITCHER_WEIGHT = 0.10;
-const SIM_ERROR_FIELDER_WEIGHT = 0.50;
+const SIM_OUT_RANGE_WEIGHT = 0.35;
+const SIM_OUT_GLOVE_WEIGHT = 0.20;
+const SIM_ERROR_GLOVE_WEIGHT = 0.50;
+// Soft or medium contact that stays in the infield can sneak through as a hit when the
+// batter runs well; Speed also cuts ground-ball double play chance.
+const SIM_INFIELD_HIT_SPEED_WEIGHT = 0.20;
+const SIM_DOUBLE_PLAY_SPEED_WEIGHT = 0.25;
 
-// Step five, hit type on outfield hits: league mix of single, double, triple and home run,
-// moved by batter power edge against pitcher arm edge. The outfielder's edge turns
-// doubles and triples back into singles but cannot stop a home run.
-const SIM_OUTFIELD_HIT_1B_SHARE = 0.5945;
+// Step five, hit type on outfield hits: league mix of single, double, triple and home run.
+// Batter Power raises extra-base odds; pitcher Velocity lowers them (soft contact / late
+// swings). Outfielder Arm turns doubles and triples into singles; Range also helps cut
+// gap doubles. Neither can stop a home run.
+const SIM_OUTFIELD_HIT_1B_SHARE = 0.6093;
 const SIM_OUTFIELD_HIT_2B_SHARE = 0.2293;
 const SIM_OUTFIELD_HIT_3B_SHARE = 0.0213;
-const SIM_OUTFIELD_HIT_HR_SHARE = 0.1548;
+const SIM_OUTFIELD_HIT_HR_SHARE = 0.14;
 const SIM_XBH_POWER_WEIGHT = 0.30;
-const SIM_XBH_ARM_WEIGHT = 0.25;
+const SIM_XBH_VELOCITY_WEIGHT = 0.25;
 const SIM_HR_POWER_WEIGHT = 0.50;
-const SIM_HR_ARM_WEIGHT = 0.35;
-const SIM_XBH_OUTFIELDER_WEIGHT = 0.25;
+const SIM_HR_VELOCITY_WEIGHT = 0.35;
+const SIM_XBH_ARM_WEIGHT = 0.20;
+const SIM_XBH_RANGE_WEIGHT = 0.15;
 
-// Baserunning stays average: the routine extra bases real runners take, with the
-// outfielder's edge lowering the odds that a runner tries and makes it.
+// Baserunning: optional extra bases rise with runner Speed and fall with outfielder Arm.
 const SIM_SCORE_FROM_SECOND_ON_SINGLE = 0.60;
 const SIM_FIRST_TO_THIRD_ON_SINGLE = 0.28;
 const SIM_SCORE_FROM_FIRST_ON_DOUBLE = 0.40;
 const SIM_SAC_FLY_CHANCE = 0.70;
-const SIM_RUNNER_HOLD_WEIGHT = 0.30;
+const SIM_RUNNER_SPEED_WEIGHT = 0.30;
+const SIM_RUNNER_ARM_HOLD_WEIGHT = 0.30;
 const SIM_DOUBLE_PLAY_CHANCE = 0.45;
 const SIM_GROUNDOUT_ADVANCE_CHANCE = 0.45;
+
+// Stolen bases: checked once per plate appearance before the pitch, when first is occupied
+// and second is open (or second occupied and third open). Modest attempt rates so a team
+// lands near half an attempt per game; success starts at the league rate and shifts with
+// runner Speed against catcher Arm.
+const SIM_STEAL_SECOND_ATTEMPT = 0.10;
+const SIM_STEAL_THIRD_ATTEMPT = 0.032;
+const SIM_STEAL_SUCCESS_LEAGUE = 0.78;
+const SIM_STEAL_ATTEMPT_SPEED_WEIGHT = 0.40;
+const SIM_STEAL_SUCCESS_SPEED_WEIGHT = 0.35;
+const SIM_STEAL_SUCCESS_ARM_WEIGHT = 0.35;
 
 // Pitch counts per plate appearance, by outcome. Strikeouts and walks run long.
 const SIM_PITCHES_K_MIN = 4;
@@ -222,29 +238,70 @@ function simulateGame(awayTeam, homeTeam, wantLog) {
         if (!batting.batting[batter.id]) {
           batting.batting[batter.id] = {
             id: batter.id, name: batter.name, pos: spot.position,
-            pa: 0, ab: 0, h: 0, d: 0, t: 0, hr: 0, r: 0, rbi: 0, bb: 0, k: 0, hbp: 0, sf: 0, roe: 0
+            pa: 0, ab: 0, h: 0, d: 0, t: 0, hr: 0, r: 0, rbi: 0, bb: 0, k: 0, hbp: 0, sf: 0, roe: 0, sb: 0, cs: 0
           };
           batting.battingOrderIds.push(batter.id);
         }
         const bline = batting.batting[batter.id];
-        bline.pa++;
-        pline.bf++;
-        const runner = { id: batter.id, line: pline, earned: true };
+        const runner = { id: batter.id, line: pline, earned: true, speed: batter.speed };
         const rollRange = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+        const abilityEdge = (value) => (value - SIM_NOMINAL_ABILITY) / SIM_ABILITY_SPREAD;
 
         // Edges of this batter and pitcher, in spreads away from nominal.
-        const eyeEdge = (batter.eye - SIM_NOMINAL_ABILITY) / SIM_ABILITY_SPREAD;
-        const powerEdge = (batter.power - SIM_NOMINAL_ABILITY) / SIM_ABILITY_SPREAD;
-        const armEdge = (pitcher.arm - SIM_NOMINAL_ABILITY) / SIM_ABILITY_SPREAD;
-        const accuracyEdge = (pitcher.accuracy - SIM_NOMINAL_ABILITY) / SIM_ABILITY_SPREAD;
-        const pitchingEdge = (playerGrades(pitcher).pitching - SIM_NOMINAL_GRADE) / SIM_GRADE_SPREAD;
+        const eyeEdge = abilityEdge(batter.eye);
+        const powerEdge = abilityEdge(batter.power);
+        const speedEdge = abilityEdge(batter.speed);
+        const commandEdge = abilityEdge(pitcher.command);
+        const velocityEdge = abilityEdge(pitcher.velocity);
+        const catcherArmEdge = abilityEdge(fielders.C.arm);
+
+        // Steal check before the pitch: first→second when second is open, else second→third
+        // when third is open. An inning-ending caught stealing does not charge the batter a PA.
+        if (outs < 2) {
+          let stealFrom = null;
+          let stealAttempt = 0;
+          if (bases.first && !bases.second) {
+            stealFrom = 'first';
+            stealAttempt = SIM_STEAL_SECOND_ATTEMPT;
+          } else if (bases.second && !bases.third && !bases.first) {
+            stealFrom = 'second';
+            stealAttempt = SIM_STEAL_THIRD_ATTEMPT;
+          }
+          if (stealFrom) {
+            const leadRunner = bases[stealFrom];
+            const leadSpeedEdge = abilityEdge(leadRunner.speed);
+            const attemptOdds = stealAttempt / (1 - stealAttempt) * Math.exp(SIM_STEAL_ATTEMPT_SPEED_WEIGHT * leadSpeedEdge);
+            if (Math.random() * (1 + attemptOdds) < attemptOdds) {
+              const successOdds = SIM_STEAL_SUCCESS_LEAGUE / (1 - SIM_STEAL_SUCCESS_LEAGUE) *
+                Math.exp(SIM_STEAL_SUCCESS_SPEED_WEIGHT * leadSpeedEdge - SIM_STEAL_SUCCESS_ARM_WEIGHT * catcherArmEdge);
+              const runnerLine = batting.batting[leadRunner.id];
+              if (Math.random() * (1 + successOdds) < successOdds) {
+                if (runnerLine) runnerLine.sb++;
+                if (stealFrom === 'first') { bases.second = bases.first; bases.first = null; }
+                else { bases.third = bases.second; bases.second = null; }
+                if (wantLog) log.push(`  ${runnerLine ? runnerLine.name : 'Runner'} steals ${stealFrom === 'first' ? 'second' : 'third'}`);
+              } else {
+                if (runnerLine) runnerLine.cs++;
+                pline.outs++;
+                outs++;
+                bases[stealFrom] = null;
+                if (wantLog) log.push(`  ${runnerLine ? runnerLine.name : 'Runner'} caught stealing`);
+                if (outs >= 3) continue;
+              }
+            }
+          }
+        }
+
+        // Pitch is thrown: charge the plate appearance now.
+        bline.pa++;
+        pline.bf++;
 
         // Step one: discipline. Each outcome's league odds against a ball in play are scaled
-        // by the two edges, then all four are renormalized and rolled once.
+        // by Eye and Command, then all four are renormalized and rolled once.
         const bipLeague = 1 - SIM_LEAGUE_K - SIM_LEAGUE_BB - SIM_LEAGUE_HBP;
-        const kWeight = SIM_LEAGUE_K / bipLeague * Math.exp(-SIM_K_EYE_WEIGHT * eyeEdge + SIM_K_ACCURACY_WEIGHT * accuracyEdge);
-        const bbWeight = SIM_LEAGUE_BB / bipLeague * Math.exp(SIM_BB_EYE_WEIGHT * eyeEdge - SIM_BB_ACCURACY_WEIGHT * accuracyEdge);
-        const hbpWeight = SIM_LEAGUE_HBP / bipLeague * Math.exp(-SIM_HBP_ACCURACY_WEIGHT * accuracyEdge);
+        const kWeight = SIM_LEAGUE_K / bipLeague * Math.exp(-SIM_K_EYE_WEIGHT * eyeEdge + SIM_K_COMMAND_WEIGHT * commandEdge);
+        const bbWeight = SIM_LEAGUE_BB / bipLeague * Math.exp(SIM_BB_EYE_WEIGHT * eyeEdge - SIM_BB_COMMAND_WEIGHT * commandEdge);
+        const hbpWeight = SIM_LEAGUE_HBP / bipLeague * Math.exp(-SIM_HBP_COMMAND_WEIGHT * commandEdge);
         const disciplineTotal = 1 + kWeight + bbWeight + hbpWeight;
         const discipline = Math.random() * disciplineTotal;
         if (discipline < kWeight) {
@@ -273,10 +330,10 @@ function simulateGame(awayTeam, homeTeam, wantLog) {
         }
         pline.pitches += rollRange(SIM_PITCHES_BIP_MIN, SIM_PITCHES_BIP_MAX);
 
-        // Step two: contact quality. Power over arm shifts the league mix toward hard contact,
-        // the reverse toward soft, with medium as the anchor.
-        const hardWeight = SIM_LEAGUE_HARD_SHARE / SIM_LEAGUE_MEDIUM_SHARE * Math.exp(SIM_HARD_POWER_WEIGHT * powerEdge - SIM_HARD_ARM_WEIGHT * armEdge);
-        const softWeight = SIM_LEAGUE_SOFT_SHARE / SIM_LEAGUE_MEDIUM_SHARE * Math.exp(-SIM_SOFT_POWER_WEIGHT * powerEdge + SIM_SOFT_ARM_WEIGHT * armEdge);
+        // Step two: contact quality. Power over Velocity shifts the league mix toward hard
+        // contact, the reverse toward soft, with medium as the anchor.
+        const hardWeight = SIM_LEAGUE_HARD_SHARE / SIM_LEAGUE_MEDIUM_SHARE * Math.exp(SIM_HARD_POWER_WEIGHT * powerEdge - SIM_HARD_VELOCITY_WEIGHT * velocityEdge);
+        const softWeight = SIM_LEAGUE_SOFT_SHARE / SIM_LEAGUE_MEDIUM_SHARE * Math.exp(-SIM_SOFT_POWER_WEIGHT * powerEdge + SIM_SOFT_VELOCITY_WEIGHT * velocityEdge);
         const contact = Math.random() * (1 + hardWeight + softWeight);
         const quality = contact < hardWeight ? 'hard' : (contact < hardWeight + softWeight ? 'soft' : 'medium');
 
@@ -294,44 +351,65 @@ function simulateGame(awayTeam, homeTeam, wantLog) {
         } else {
           position = where < SIM_OUTFIELD_WEIGHT_LF ? 'LF' : (where < SIM_OUTFIELD_WEIGHT_LF + SIM_OUTFIELD_WEIGHT_CF ? 'CF' : 'RF');
         }
-        const fielderGrades = playerGrades(fielders[position]);
-        const fielderEdge = ((position === 'C' ? fielderGrades.catching : (inInfield ? fielderGrades.infield : fielderGrades.outfield)) -
-          SIM_NOMINAL_GRADE) / SIM_GRADE_SPREAD;
+        const fielder = fielders[position];
+        const rangeEdge = abilityEdge(fielder.range);
+        const gloveEdge = abilityEdge(fielder.glove);
+        const armEdge = abilityEdge(fielder.arm);
+        // Catcher receiving leans on Glove for both outs and errors; elsewhere Range
+        // drives out conversion and Glove drives clean fielding.
+        const outReachEdge = position === 'C' ? gloveEdge : rangeEdge;
 
-        // Step four: out, error or hit. The league rates for this location and quality give
-        // odds of an out and of an error against a hit; the fielder and pitcher scale them.
+        // Step four: out, error or hit. League rates for this location and quality give
+        // odds of an out and of an error against a hit; Range and Glove scale them.
+        // Soft/medium infield balls also get a small Speed bump toward a hit.
         const hitLeague = inInfield
           ? (quality === 'soft' ? SIM_INFIELD_HIT_SOFT : (quality === 'hard' ? SIM_INFIELD_HIT_HARD : SIM_INFIELD_HIT_MEDIUM))
           : (quality === 'soft' ? SIM_OUTFIELD_HIT_SOFT : (quality === 'hard' ? SIM_OUTFIELD_HIT_HARD : SIM_OUTFIELD_HIT_MEDIUM));
         const errorLeague = inInfield ? SIM_INFIELD_ERROR : SIM_OUTFIELD_ERROR;
+        const speedHitBump = (inInfield && quality !== 'hard') ? SIM_INFIELD_HIT_SPEED_WEIGHT * speedEdge : 0;
         const outWeight = (1 - hitLeague - errorLeague) / hitLeague *
-          Math.exp(SIM_OUT_FIELDER_WEIGHT * fielderEdge + SIM_OUT_PITCHER_WEIGHT * pitchingEdge);
-        const errorWeight = errorLeague / hitLeague * Math.exp(-SIM_ERROR_FIELDER_WEIGHT * fielderEdge);
+          Math.exp(SIM_OUT_RANGE_WEIGHT * outReachEdge + SIM_OUT_GLOVE_WEIGHT * gloveEdge - speedHitBump);
+        const errorWeight = errorLeague / hitLeague * Math.exp(-SIM_ERROR_GLOVE_WEIGHT * gloveEdge);
         const fieldRoll = Math.random() * (1 + outWeight + errorWeight);
-        // Odds that a runner takes an optional extra base against this fielder.
-        const runnerOdds = (league) => league / (1 - league) * Math.exp(-SIM_RUNNER_HOLD_WEIGHT * fielderEdge);
         if (fieldRoll < outWeight) {
           bline.ab++;
           outs++;
           pline.outs++;
           if (!inInfield) {
-            // Fly ball: a runner on third tags up with fewer than three outs; a strong arm holds him.
-            if (outs < 3 && bases.third && Math.random() * (1 + runnerOdds(SIM_SAC_FLY_CHANCE)) < runnerOdds(SIM_SAC_FLY_CHANCE)) {
-              bline.ab--; bline.sf++;
-              score(bases.third, bline);
-              bases.third = null;
-              if (wantLog) log.push(`  ${batter.name} hits a sacrifice fly to ${position}`);
+            // Fly ball: a runner on third tags up with fewer than three outs; Arm holds him
+            // and the tagging runner's own Speed (stored on the baserunner) helps him go.
+            if (outs < 3 && bases.third) {
+              const tagSpeed = abilityEdge(bases.third.speed);
+              const tagOdds = SIM_SAC_FLY_CHANCE / (1 - SIM_SAC_FLY_CHANCE) *
+                Math.exp(SIM_RUNNER_SPEED_WEIGHT * tagSpeed - SIM_RUNNER_ARM_HOLD_WEIGHT * armEdge);
+              if (Math.random() * (1 + tagOdds) < tagOdds) {
+                bline.ab--; bline.sf++;
+                score(bases.third, bline);
+                bases.third = null;
+                if (wantLog) log.push(`  ${batter.name} hits a sacrifice fly to ${position}`);
+              } else if (wantLog) log.push(`  ${batter.name} flies out to ${position}`);
             } else if (wantLog) log.push(`  ${batter.name} flies out to ${position}`);
-          } else if (position !== 'C' && bases.first && outs < 3 && Math.random() < SIM_DOUBLE_PLAY_CHANCE) {
-            // Ground ball double play erases the batter and the runner from first; others move up if the inning lives.
-            outs++;
-            pline.outs++;
-            bases.first = null;
-            if (outs < 3) {
-              if (bases.third) { score(bases.third, null); bases.third = null; }
-              if (bases.second) { bases.third = bases.second; bases.second = null; }
+          } else if (position !== 'C' && bases.first && outs < 3) {
+            // Ground ball double play chance falls when the runner from first is fast.
+            const dpChance = SIM_DOUBLE_PLAY_CHANCE *
+              Math.exp(-SIM_DOUBLE_PLAY_SPEED_WEIGHT * abilityEdge(bases.first.speed));
+            if (Math.random() < dpChance) {
+              outs++;
+              pline.outs++;
+              bases.first = null;
+              if (outs < 3) {
+                if (bases.third) { score(bases.third, null); bases.third = null; }
+                if (bases.second) { bases.third = bases.second; bases.second = null; }
+              }
+              if (wantLog) log.push(`  ${batter.name} grounds into a double play`);
+            } else {
+              if (outs < 3) {
+                if (bases.third && Math.random() < SIM_GROUNDOUT_ADVANCE_CHANCE) { score(bases.third, bline); bases.third = null; }
+                if (bases.second && !bases.third && Math.random() < SIM_GROUNDOUT_ADVANCE_CHANCE) { bases.third = bases.second; bases.second = null; }
+                if (bases.first && !bases.second) { bases.second = bases.first; bases.first = null; }
+              }
+              if (wantLog) log.push(`  ${batter.name} grounds out to ${position}`);
             }
-            if (wantLog) log.push(`  ${batter.name} grounds into a double play`);
           } else {
             // Routine out on the ground or in the air; runners may move up one base on a grounder.
             if (outs < 3 && position !== 'C') {
@@ -358,16 +436,18 @@ function simulateGame(awayTeam, homeTeam, wantLog) {
         }
 
         // Step five: hit type. Infield hits are singles. Outfield hits take the league mix with
-        // each extra-base kind's odds against a single scaled by power over arm; the outfielder
-        // cuts doubles and triples back to singles.
+        // each extra-base kind's odds against a single scaled by Power over Velocity; the
+        // outfielder's Arm (and Range on gap doubles) cuts doubles and triples back to singles.
         let basesGained = 1;
         if (!inInfield) {
           const doubleWeight = SIM_OUTFIELD_HIT_2B_SHARE / SIM_OUTFIELD_HIT_1B_SHARE *
-            Math.exp(SIM_XBH_POWER_WEIGHT * powerEdge - SIM_XBH_ARM_WEIGHT * armEdge - SIM_XBH_OUTFIELDER_WEIGHT * fielderEdge);
+            Math.exp(SIM_XBH_POWER_WEIGHT * powerEdge - SIM_XBH_VELOCITY_WEIGHT * velocityEdge -
+              SIM_XBH_ARM_WEIGHT * armEdge - SIM_XBH_RANGE_WEIGHT * rangeEdge);
           const tripleWeight = SIM_OUTFIELD_HIT_3B_SHARE / SIM_OUTFIELD_HIT_1B_SHARE *
-            Math.exp(SIM_XBH_POWER_WEIGHT * powerEdge - SIM_XBH_ARM_WEIGHT * armEdge - SIM_XBH_OUTFIELDER_WEIGHT * fielderEdge);
+            Math.exp(SIM_XBH_POWER_WEIGHT * powerEdge - SIM_XBH_VELOCITY_WEIGHT * velocityEdge -
+              SIM_XBH_ARM_WEIGHT * armEdge);
           const homerWeight = SIM_OUTFIELD_HIT_HR_SHARE / SIM_OUTFIELD_HIT_1B_SHARE *
-            Math.exp(SIM_HR_POWER_WEIGHT * powerEdge - SIM_HR_ARM_WEIGHT * armEdge);
+            Math.exp(SIM_HR_POWER_WEIGHT * powerEdge - SIM_HR_VELOCITY_WEIGHT * velocityEdge);
           const kind = Math.random() * (1 + doubleWeight + tripleWeight + homerWeight);
           basesGained = kind < homerWeight ? 4 : (kind < homerWeight + tripleWeight ? 3 : (kind < homerWeight + tripleWeight + doubleWeight ? 2 : 1));
         }
@@ -395,14 +475,18 @@ function simulateGame(awayTeam, homeTeam, wantLog) {
           bases.third = runner;
           continue;
         }
-        // Outfield arms cut down the optional extra base.
-        const extraBase = (league) => !inInfield && Math.random() * (1 + runnerOdds(league)) < runnerOdds(league);
+        // Optional extra bases: each lead runner's own Speed vs this outfielder's Arm.
+        const extraBase = (leadRunner, league) => !inInfield && (() => {
+          const odds = league / (1 - league) *
+            Math.exp(SIM_RUNNER_SPEED_WEIGHT * abilityEdge(leadRunner.speed) - SIM_RUNNER_ARM_HOLD_WEIGHT * armEdge);
+          return Math.random() * (1 + odds) < odds;
+        })();
         if (basesGained === 2) {
           if (bases.third) score(bases.third, bline);
           if (bases.second) score(bases.second, bline);
           bases.third = null;
           if (bases.first) {
-            if (extraBase(SIM_SCORE_FROM_FIRST_ON_DOUBLE)) score(bases.first, bline);
+            if (extraBase(bases.first, SIM_SCORE_FROM_FIRST_ON_DOUBLE)) score(bases.first, bline);
             else bases.third = bases.first;
           }
           bases.first = null;
@@ -411,12 +495,12 @@ function simulateGame(awayTeam, homeTeam, wantLog) {
         }
         if (bases.third) { score(bases.third, bline); bases.third = null; }
         if (bases.second) {
-          if (extraBase(SIM_SCORE_FROM_SECOND_ON_SINGLE)) score(bases.second, bline);
+          if (extraBase(bases.second, SIM_SCORE_FROM_SECOND_ON_SINGLE)) score(bases.second, bline);
           else bases.third = bases.second;
           bases.second = null;
         }
         if (bases.first) {
-          if (!bases.third && extraBase(SIM_FIRST_TO_THIRD_ON_SINGLE)) bases.third = bases.first;
+          if (!bases.third && extraBase(bases.first, SIM_FIRST_TO_THIRD_ON_SINGLE)) bases.third = bases.first;
           else bases.second = bases.first;
         }
         bases.first = runner;

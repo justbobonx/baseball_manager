@@ -30,13 +30,16 @@ const ROSTER_SLOTS = [
 
 // Drafting should feel like a human manager: the bat comes first everywhere on the field
 // except behind the plate, where receiving matters more. Pitchers are judged on pitching alone.
-// Each pair of weights is hitting, then the slot's fielding grade.
-const DRAFT_INFIELD_HITTING_WEIGHT = 0.7;
+// A small Speed weight is taken from the hitting share for every position player.
+const DRAFT_INFIELD_HITTING_WEIGHT = 0.6;
 const DRAFT_INFIELD_FIELDING_WEIGHT = 0.3;
-const DRAFT_OUTFIELD_HITTING_WEIGHT = 0.7;
+const DRAFT_INFIELD_SPEED_WEIGHT = 0.1;
+const DRAFT_OUTFIELD_HITTING_WEIGHT = 0.6;
 const DRAFT_OUTFIELD_FIELDING_WEIGHT = 0.3;
-const DRAFT_CATCHER_HITTING_WEIGHT = 0.4;
+const DRAFT_OUTFIELD_SPEED_WEIGHT = 0.1;
+const DRAFT_CATCHER_HITTING_WEIGHT = 0.3;
 const DRAFT_CATCHER_FIELDING_WEIGHT = 0.6;
+const DRAFT_CATCHER_SPEED_WEIGHT = 0.1;
 // Pitchers are drafted first because good arms are the scarce resource.
 const DRAFT_SLOT_ORDER = ['SP1','SP2','SP3','SP4','SP5','CL','RP1','RP2','RP3','RP4','C','SS','2B','CF','3B','1B','LF','RF','BN1','BN2','BN3','BN4'];
 
@@ -92,9 +95,12 @@ function buildGameTeam(teamRecord, roster, rotationTurn) {
 function slotDraftScore(slot, player) {
   const grades = playerGrades(player);
   if (slot.kind !== 'field' && slot.kind !== 'bench') return grades.pitching;
-  const asInfielder = grades.hitting * DRAFT_INFIELD_HITTING_WEIGHT + grades.infield * DRAFT_INFIELD_FIELDING_WEIGHT;
-  const asOutfielder = grades.hitting * DRAFT_OUTFIELD_HITTING_WEIGHT + grades.outfield * DRAFT_OUTFIELD_FIELDING_WEIGHT;
-  const asCatcher = grades.hitting * DRAFT_CATCHER_HITTING_WEIGHT + grades.catching * DRAFT_CATCHER_FIELDING_WEIGHT;
+  const asInfielder = grades.hitting * DRAFT_INFIELD_HITTING_WEIGHT +
+    grades.infield * DRAFT_INFIELD_FIELDING_WEIGHT + player.speed * DRAFT_INFIELD_SPEED_WEIGHT;
+  const asOutfielder = grades.hitting * DRAFT_OUTFIELD_HITTING_WEIGHT +
+    grades.outfield * DRAFT_OUTFIELD_FIELDING_WEIGHT + player.speed * DRAFT_OUTFIELD_SPEED_WEIGHT;
+  const asCatcher = grades.hitting * DRAFT_CATCHER_HITTING_WEIGHT +
+    grades.catching * DRAFT_CATCHER_FIELDING_WEIGHT + player.speed * DRAFT_CATCHER_SPEED_WEIGHT;
   if (slot.kind === 'bench') return Math.max(asInfielder, asOutfielder, asCatcher);
   return slot.area === 'catching' ? asCatcher : (slot.area === 'infield' ? asInfielder : asOutfielder);
 }

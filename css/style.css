@@ -1,17 +1,22 @@
 /* style.css — simple, readable manager UI */
 
 :root {
-  --bg: #0f1419;
-  --panel: #1a2332;
-  --border: #2d3a4d;
-  --text: #e8eef5;
-  --muted: #8b9bb4;
-  --accent: #3d8bfd;
-  --good: #3dd68c;
-  --warn: #f5a524;
-  --control: #243044;
-  --control-hover: #2c3c56;
-  --overlay: #05080c;
+  --bg: #07160c;
+  --panel: #0d2414;
+  --border: #2c5a37;
+  --text: #f2f8f3;
+  --muted: #a9c8b0;
+  --accent: #2f9e4c;
+  --good: #2e9e4a;
+  --warn: #f5b041;
+  --control: #143520;
+  --control-hover: #1d4a2c;
+  --overlay: #020805;
+  --header: #0a1f10;
+  --card: #0f2c18;
+  --field-height: 560px;
+  --bench-width: 190px;
+  --field-card-width: 150px;
   --white: #ffffff;
 }
 
@@ -19,7 +24,7 @@
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
 body { min-height: 100vh; }
 
-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+header { background: var(--header); color: var(--white); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 header h1 { margin: 0; font-size: 1.25rem; }
 #pb-status { font-size: 0.85rem; color: var(--muted); }
 
@@ -32,13 +37,24 @@ button:hover { background: var(--control-hover); }
 button:disabled { opacity: 0.5; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--white); }
 button.primary:hover { filter: brightness(1.1); }
+/* Dropdown entries draw on their own surface in some browsers, so give them the dark colours too. */
+option { background: var(--control); color: var(--text); }
+input::placeholder { color: var(--muted); }
 input.wide { width: 100%; margin-bottom: 12px; }
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
 
 .slot-group { grid-column: 1 / -1; margin: 12px 0 4px; }
-.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
-.slot { border: 1px dashed var(--border); border-radius: 6px; padding: 8px; min-height: 72px; font-size: 0.85rem; cursor: pointer; }
+/* The ballpark: the drawn field on the left with fielders laid on top, the bench to its right. */
+.slots { display: block; }
+.park { display: flex; gap: 12px; align-items: stretch; }
+.field { position: relative; flex: 1; height: var(--field-height); border-radius: 8px; overflow: hidden; }
+.field-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bench { width: var(--bench-width); display: flex; flex-direction: column; gap: 8px; }
+.bench .slot-group { margin-top: 0; }
+.slot-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.slot.on-field { position: absolute; width: var(--field-card-width); transform: translate(-50%, -50%); min-height: 0; box-shadow: 0 2px 6px var(--overlay); }
+.slot { background: var(--card); border: 1px dashed var(--border); border-radius: 6px; padding: 8px; min-height: 72px; font-size: 0.85rem; cursor: pointer; }
 .slot strong { display: block; color: var(--muted); font-size: 0.75rem; }
 .slot small { color: var(--muted); }
 .slot.filled { border-style: solid; border-color: var(--accent); }
@@ -48,8 +64,33 @@ input.wide { width: 100%; margin-bottom: 12px; }
 .modal { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .modal.hidden { display: none; }
 .modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; width: min(560px, 92vw); max-height: 80vh; overflow: auto; }
-.player-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-.player-row button { padding: 4px 10px; }
+#picker-modal .modal-box { width: min(980px, 96vw); }
+.player-row { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.picker-body { min-width: 0; }
+.picker-name { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-weight: 600; margin-bottom: 6px; }
+.picker-name button { padding: 4px 10px; flex-shrink: 0; }
+.picker-from { color: var(--warn); font-weight: 600; font-size: 0.8rem; }
+.picker-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.picker-col { min-width: 0; }
+.picker-grade { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.picker-grade-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.02em; }
+.picker-attrs { display: flex; flex-direction: row; gap: 4px; }
+.picker-attr { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; width: 50%; }
+.picker-attr-text { font-size: 0.7rem; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.rating-bar { display: block; width: 100%; border-radius: 2px; overflow: hidden; position: relative; }
+.rating-fill { display: block; height: 100%; border-radius: 2px; }
+.bar-grade { height: 10px; }
+.bar-attr { height: 3px; }
+.bar-card { height: 3px; width: 100%; }
+
+.card-name { margin: 2px 0 4px; font-size: 0.8rem; line-height: 1.2; }
+.card-ratings { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.card-stat { display: flex; flex-direction: column; gap: 1px; min-width: 34px; }
+.card-stat-text { font-size: 0.7rem; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1.1; }
+.slot.on-field .card-name { font-size: 0.75rem; }
+.slot.on-field .card-stat { min-width: 30px; }
+.slot.on-field { font-size: 0.8rem; padding: 6px; }
 
 .box { font-family: ui-monospace, monospace; font-size: 0.8rem; white-space: pre; overflow-x: auto; margin-top: 12px; }
 .log { font-family: ui-monospace, monospace; font-size: 0.8rem; white-space: pre-wrap; max-height: 320px; overflow: auto; color: var(--muted); }
