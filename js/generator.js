@@ -1,6 +1,6 @@
 // Player abilities, grades and pool generation.
 // Follows the abilities and generator design doc: eight abilities, grades computed on the fly,
-// floors first then skewed draws from the free pool in a random order.
+// floors first then each leftover point is drawn by weighted lottery across the abilities.
 
 const GEN_TOTAL_MIN = 450;
 const GEN_TOTAL_MAX = 600;
@@ -9,10 +9,15 @@ const GEN_TOTAL_SPREAD = 40;
 const GEN_FLOOR_MIN = 30;
 const GEN_FLOOR_MAX = 50;
 const GEN_ABILITY_MAX = 100;
-const GEN_SKEW_POWER = 2;
+// Once shuffled onto a player, these set how strongly each ability competes for leftover points.
+const GEN_PREFERENCE_WEIGHTS = [4, 3, 2, 2, 1, 1, 0.5, 0.5];
+// Delays the spending penalty until abilities approach the upper end.
+const GEN_RATING_CURVE_INNER_EXPONENT = 6;
+// Controls how sharply spending falls off near the cap.
+const GEN_RATING_CURVE_OUTER_EXPONENT = 3;
 const GEN_LEFT_HANDED_CHANCE = 0.30;
 
-// Ability list order is only a default; generation shuffles before drawing.
+// Ability list order is only a default; generation shuffles preference onto them per player.
 const GEN_ABILITIES = ['eye', 'power', 'speed', 'glove', 'range', 'arm', 'command', 'velocity'];
 
 // Pool coverage: keep generating until enough players clear each grade bar
@@ -61,19 +66,40 @@ function generatePlayer() {
     free -= player[ability];
   }
 
-  // Walk the abilities in shuffled order; early ones draw heavily toward their cap
-  // and starve the later ones, which is what produces specialists.
-  const order = GEN_ABILITIES.slice();
-  for (let i = order.length - 1; i > 0; i--) {
+  // Assign the preference ladder in a random order so each player favors a different mix.
+  const prefs = GEN_PREFERENCE_WEIGHTS.slice();
+  for (let i = prefs.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
+    [prefs[i], prefs[j]] = [prefs[j], prefs[i]];
   }
-  for (const ability of order) {
-    if (free <= 0) break;
-    const room = Math.min(GEN_ABILITY_MAX - player[ability], free);
-    const gain = Math.round(room * (1 - Math.pow(1 - Math.random(), GEN_SKEW_POWER)));
-    player[ability] += gain;
-    free -= gain;
+  const preference = {};
+  for (let i = 0; i < GEN_ABILITIES.length; i++) preference[GEN_ABILITIES[i]] = prefs[i];
+
+  // Spend one point at a time. Favorites compete harder, and every ability gets quieter
+  // the closer it already sits to the cap, using the same absolute-rating falloff.
+  while (free > 0) {
+    let weightSum = 0;
+    const weights = [];
+    for (const ability of GEN_ABILITIES) {
+      const room = GEN_ABILITY_MAX - player[ability];
+      const weight = room <= 0
+        ? 0
+        : preference[ability] * Math.pow(1 - Math.pow(player[ability] / GEN_ABILITY_MAX, GEN_RATING_CURVE_INNER_EXPONENT), GEN_RATING_CURVE_OUTER_EXPONENT);
+      weights.push(weight);
+      weightSum += weight;
+    }
+    if (weightSum <= 0) break;
+    let pick = Math.random() * weightSum;
+    let chosen = GEN_ABILITIES[GEN_ABILITIES.length - 1];
+    for (let i = 0; i < GEN_ABILITIES.length; i++) {
+      pick -= weights[i];
+      if (pick < 0) {
+        chosen = GEN_ABILITIES[i];
+        break;
+      }
+    }
+    player[chosen] += 1;
+    free -= 1;
   }
 
   player.name = GEN_FIRST_NAMES[Math.floor(Math.random() * GEN_FIRST_NAMES.length)] + ' ' +
